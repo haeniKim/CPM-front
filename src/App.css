@@ -3,9 +3,10 @@ body {
 }
 
 .grid-item {
-  background-color: #f5f5f5; /* 배경색 설정 */
+  background-color: rgba(245, 245, 245, 0.8); /* 배경색 설정 */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 그림자 추가 */
   border-radius: 8px; /* 모서리 둥글게 */
+  height: 250px;
 }
 
 header {

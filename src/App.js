@@ -1,26 +1,20 @@
 import "./App.css";
+// Socket 통신 부분 파일 분리
+import useMetricbeatData from "./\bSocketIO";
 
 import { useDebugValue, useState, useEffect, useMemo } from "react";
 
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
+import io from "socket.io-client";
+
 // ApexCharts
-import ApexCharts from "apexcharts";
+//import ApexCharts from "apexcharts";
 import ReactApexChart from "react-apexcharts";
 
 // MUI
-import Stack from "@mui/material/Stack";
-
-import { Gauge, gaugeClasses } from "@mui/x-charts/Gauge";
-import Button from "@mui/material/Button";
-import ButtonGroup from "@mui/material/ButtonGroup";
 import Container from "@mui/material/Container";
 import Grid from "@mui/material/Grid";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogTitle from "@mui/material/DialogTitle";
 
 function Header() {
   return (
@@ -30,16 +24,13 @@ function Header() {
   );
 }
 
-//Gauge 퍼센트별로 색 조절 (초록, 빨강))
-
+// 1. CPU Usage Gauge
 function CPU_gauge() {
-  const cpu_user_pct = 0.6;
-  const cpu_sys_pct = 0.3;
-  const cpu_cores = 8;
-  const cpu_usg_pct = (
-    ((cpu_user_pct + cpu_sys_pct) / cpu_cores) *
-    100
-  ).toFixed(3);
+  //const [cpuGaugeData, setCpuGaugeData] = useState([]);
+  //setCpuGaugeData(mbData[0]);
+
+  const mbData = useMetricbeatData();
+  const cpuGaugeData = mbData.length > 0 ? mbData[0] : 0;
 
   const options = {
     chart: {
@@ -87,7 +78,7 @@ function CPU_gauge() {
     labels: ["CPU Usage"],
   };
 
-  const series = [cpu_usg_pct];
+  const series = [cpuGaugeData];
 
   return (
     <div className="grid-item">
@@ -102,8 +93,10 @@ function CPU_gauge() {
   );
 }
 
+// 2. Memory Usage Gauge
 function Memory_gauge() {
-  const sys_mem_used_pct = (0.932 * 100).toFixed(3);
+  const mbData = useMetricbeatData();
+  const sys_mem_used_pct = mbData.length > 0 ? mbData[1] : 0;
 
   const options = {
     chart: {
@@ -166,9 +159,10 @@ function Memory_gauge() {
   );
 }
 
+//3. Load Gauge
 function Load_gauge() {
-  //게이지 범위 조정
-  const sys_load_5 = 2.5;
+  const mbData = useMetricbeatData();
+  const sys_load_5 = mbData.length > 0 ? mbData[2] : 0;
 
   const options = {
     chart: {
@@ -259,23 +253,28 @@ function Out_traffic() {
   );
 }
 
+//6. Packetloss
 function Packetloss() {
-  const packet_loss = 0;
-  const out_packetloss = 5401;
+  const mbData = useMetricbeatData();
+  const in_packetloss = mbData.length > 0 ? mbData[6] : 0;
+  const out_packetloss = mbData.length > 0 ? mbData[7] : 0;
+
   return (
     <div className="grid-item">
       <h4>Packetloss</h4>
       <div className="text-box">
         <h3>In Packetloss</h3>
-        <h1>{packet_loss}</h1>
+        <h1>{in_packetloss}</h1>
         <h3>Out Packetloss {out_packetloss}</h3>
       </div>
     </div>
   );
 }
 
+//7. Swqp Usage
 function Swap_usage() {
-  const sys_swap_pct = 58.3;
+  const mbData = useMetricbeatData();
+  const sys_swap_pct = mbData.length > 0 ? mbData[3] : 0;
 
   const options = {
     chart: {
@@ -338,12 +337,15 @@ function Swap_usage() {
   );
 }
 
+//8. Memory Usage vs Total
 function Memory_tot() {
-  const mem_usage = 14.9;
-  const tot_memory = 16;
+  const mbData = useMetricbeatData();
+  const mem_usage = mbData.length > 0 ? mbData[8] : 0;
+  const tot_memory = mbData.length > 0 ? mbData[9] : 0;
+
   return (
     <div className="grid-item">
-      <h4>Memory Udage vs Total </h4>
+      <h4>Memory Usage vs Total </h4>
       <div className="text-box">
         <h3>Memory Usage</h3>
         <h1>{mem_usage}GB</h1>
@@ -353,23 +355,29 @@ function Memory_tot() {
   );
 }
 
+//9. Number of Process
 function Process_num() {
-  const num_process = 35;
+  const mbData = useMetricbeatData();
+  const num_process = mbData.length > 0 ? mbData[5] : 0;
   return (
     <div className="grid-item">
-      <h4>Number of Processes</h4>
+      <h4 style={{ marginBottom: "8px" }}>Number of Processes</h4>
       <div className="text-box">
-        <p style={{ fontSize: "55px", fontWeight: "800" }}>{num_process}</p>
+        <p
+          style={{ fontSize: "55px", fontWeight: "800", marginBottom: "-2px" }}
+        >
+          {num_process}
+        </p>
         <h3>Processes</h3>
       </div>
     </div>
   );
 }
 
+// 10. Disk Used
 function Disk_used() {
-  const fsstat_used = 764737406464;
-  const fsstat_total = 2967881852416;
-  const d_used = ((fsstat_used / fsstat_total) * 100).toFixed(3);
+  const mbData = useMetricbeatData();
+  const d_used = mbData.length > 0 ? mbData[4] : 0;
 
   const options = {
     chart: {
@@ -432,7 +440,13 @@ function Disk_used() {
   );
 }
 
+// 11. Disk Usage
 function Disk_usage() {
+  const mbData = useMetricbeatData();
+
+  const categories = mbData[10][0];
+  const data = mbData[10][1];
+
   //bar graph
   const options = {
     chart: {
@@ -449,7 +463,7 @@ function Disk_usage() {
     xaxis: {
       // 받아와야 하는 값
       labels: { show: false },
-      categories: ["/Volumes/Google Chrome", "/Volumes/Docker", "/"],
+      categories: [categories],
     },
     fill: {
       colors: [
@@ -469,7 +483,7 @@ function Disk_usage() {
     },
   };
 
-  const series = [{ data: [100, 45, 30] }]; //예시 시계열 데이터
+  const series = [{ data: [data] }]; //예시 시계열 데이터
 
   return (
     <div className="grid-item">
@@ -478,7 +492,7 @@ function Disk_usage() {
         options={options}
         series={series}
         type="bar"
-        height={250}
+        height={200}
       />
     </div>
   );
@@ -556,7 +570,7 @@ function CPU_usage() {
         options={options}
         series={series}
         type="area"
-        height={250}
+        height={200}
       />
     </div>
   );
@@ -681,7 +695,7 @@ function System_load() {
         options={options}
         series={series}
         type="line"
-        height={250}
+        height={200}
       />
     </div>
   );
@@ -720,7 +734,7 @@ function Memory_usage() {
         options={options}
         series={series}
         type="bar"
-        height={250}
+        height={200}
       />
     </div>
   );
@@ -791,7 +805,7 @@ function Disk_IO() {
         options={options}
         series={series}
         type="area"
-        height={250}
+        height={200}
       />
     </div>
   );
@@ -862,7 +876,7 @@ function Network_traffic_p() {
         options={options}
         series={series}
         type="area"
-        height={250}
+        height={200}
       />
     </div>
   );
@@ -933,7 +947,7 @@ function Network_traffic_b() {
         options={options}
         series={series}
         type="area"
-        height={250}
+        height={200}
       />
     </div>
   );
@@ -985,7 +999,7 @@ function Process_by_m() {
         options={options}
         series={series}
         type="bar"
-        height={250}
+        height={200}
       />
     </div>
   );
@@ -1032,7 +1046,7 @@ function Top_process() {
         options={options}
         series={series}
         type="bar"
-        height={250}
+        height={200}
       />
     </div>
   );
@@ -1075,7 +1089,7 @@ function If_in_traffic() {
         options={options}
         series={series}
         type="bar"
-        height={250}
+        height={200}
       />
     </div>
   );
@@ -1118,7 +1132,7 @@ function If_out_traffic() {
         options={options}
         series={series}
         type="bar"
-        height={250}
+        height={200}
       />
     </div>
   );
@@ -1129,6 +1143,34 @@ function Footer() {
     <footer>
       <img src="direa_logo.png" alt="Direa logo" />
     </footer>
+  );
+}
+
+function Test() {
+  //socket.io 통신 테스트
+  const [mbData, setMbData] = useState([]);
+
+  useEffect(() => {
+    const socket = io("http://localhost:4000");
+
+    socket.on("MetricbeatData", (data) => {
+      console.log("Received Metricbeat data: ", data);
+      setMbData(data);
+    });
+
+    //component unmount시 socket 연결 해제
+    return () => {
+      socket.off("MetricbeatData");
+      socket.close();
+    };
+  }, []);
+
+  return (
+    <div className="grid-item">
+      <div>
+        <p> MetricbeatData : {mbData[10]}</p>
+      </div>
+    </div>
   );
 }
 
@@ -1200,6 +1242,9 @@ function App() {
           </Grid>
           <Grid item xs="6">
             <If_out_traffic></If_out_traffic>
+          </Grid>
+          <Grid item xs="12">
+            <Test></Test>
           </Grid>
         </Grid>
       </Container>
